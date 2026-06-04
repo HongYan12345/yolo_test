@@ -1,0 +1,19 @@
+# Training/data-preparation dependencies for MapleStoryAI.
+#
+# Recommended install order:
+#
+# 1) If you train on NVIDIA GPU, install CUDA PyTorch first.
+#    GTX 1080 is Pascal; CUDA 11.8 wheels are usually safer for old-driver compatibility:
+#    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+#
+# 2) Then install this file:
+#    pip install -r requirements-train.txt
+#
+# If you only train on CPU, installing ultralytics may install a compatible CPU torch
+# automatically, but GPU training is strongly recommended for YOLO.
+
+ultralytics>=8.2.0
+opencv-python>=4.8.0
+pillow>=10.0.0
+numpy>=1.24.0
+pyyaml>=6.0.0

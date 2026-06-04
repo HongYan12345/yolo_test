@@ -1,0 +1,73 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.python-version
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE/editor
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and temporary probe output
+logs/
+tmp_probe/
+
+# Downloaded crawler assets.
+# Keep directory skeleton via .gitkeep files, but do not commit crawled game assets.
+assets/monsters/raw/*
+!assets/monsters/raw/.gitkeep
+assets/items/raw/*
+!assets/items/raw/.gitkeep
+assets/monsters/metadata.csv
+assets/items/metadata.csv
+
+# Generated datasets.
+# Keep directory skeleton via .gitkeep files, but do not commit generated images/labels.
+datasets/synthetic/images/*
+!datasets/synthetic/images/.gitkeep
+datasets/synthetic/labels/*
+!datasets/synthetic/labels/.gitkeep
+
+datasets/yolo/images/train/*
+!datasets/yolo/images/train/.gitkeep
+datasets/yolo/images/val/*
+!datasets/yolo/images/val/.gitkeep
+datasets/yolo/images/test/*
+!datasets/yolo/images/test/.gitkeep
+datasets/yolo/labels/train/*
+!datasets/yolo/labels/train/.gitkeep
+datasets/yolo/labels/val/*
+!datasets/yolo/labels/val/.gitkeep
+datasets/yolo/labels/test/*
+!datasets/yolo/labels/test/.gitkeep
+datasets/yolo/data.yaml
+
+# Ultralytics training outputs
+runs/
+
+# Downloaded pretrained weights and exported models
+*.pt
+*.onnx
+*.engine
+*.torchscript
+*.tflite
+*.pb
+
+# Local model output directory, keep skeleton only
+models/*
+!models/.gitkeep
+
+# Package/build artifacts
+build/
+dist/
+*.egg-info/
