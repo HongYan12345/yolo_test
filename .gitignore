@@ -22,15 +22,6 @@ Thumbs.db
 logs/
 tmp_probe/
 
-# Downloaded crawler assets.
-# Keep directory skeleton via .gitkeep files, but do not commit crawled game assets.
-assets/monsters/raw/*
-!assets/monsters/raw/.gitkeep
-assets/items/raw/*
-!assets/items/raw/.gitkeep
-assets/monsters/metadata.csv
-assets/items/metadata.csv
-
 # Generated datasets.
 # Keep directory skeleton via .gitkeep files, but do not commit generated images/labels.
 datasets/synthetic/images/*
