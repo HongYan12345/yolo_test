@@ -43,6 +43,10 @@ datasets/yolo/labels/test/*
 !datasets/yolo/labels/test/.gitkeep
 datasets/yolo/data.yaml
 
+# Downloaded external datasets, e.g. Roboflow exports
+datasets/external/*
+!datasets/external/.gitkeep
+
 # Ultralytics training outputs
 runs/
 
