@@ -32,12 +32,14 @@ Output layout:
     images/
     labels/
 
-Current project class mapping:
+Current project class mapping follows the downloaded Roboflow data.yaml:
 
-  0: rope
-  1: platform
-  2: monster
-  3: item
+  0: Item
+  1: Mob
+  2: Platform
+  3: Player
+  4: Portal
+  5: Rope
 
 The source dataset may contain different class names and class ids, so this
 script remaps labels by class name. Unknown/non-target classes are skipped.
@@ -53,41 +55,48 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 import yaml
+from PIL import Image
 
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
 
 TARGET_CLASS_IDS: Mapping[str, int] = {
-    "rope": 0,
-    "platform": 1,
-    "monster": 2,
-    "item": 3,
+    "item": 0,
+    "mob": 1,
+    "platform": 2,
+    "player": 3,
+    "portal": 4,
+    "rope": 5,
 }
 
 # Conservative aliases. Use --map if the Roboflow dataset uses different names.
 DEFAULT_ALIASES: Mapping[str, str] = {
-    "rope": "rope",
-    "ropes": "rope",
-    "ladder": "rope",
-    "ladders": "rope",
-    "platform": "platform",
-    "platforms": "platform",
-    "foothold": "platform",
-    "footholds": "platform",
-    "ground": "platform",
-    "floor": "platform",
-    "monster": "monster",
-    "monsters": "monster",
-    "mob": "monster",
-    "mobs": "monster",
-    "enemy": "monster",
-    "enemies": "monster",
     "item": "item",
     "items": "item",
     "drop": "item",
     "drops": "item",
     "loot": "item",
     "loots": "item",
+    "mob": "mob",
+    "mobs": "mob",
+    "monster": "mob",
+    "monsters": "mob",
+    "enemy": "mob",
+    "enemies": "mob",
+    "platform": "platform",
+    "platforms": "platform",
+    "foothold": "platform",
+    "footholds": "platform",
+    "ground": "platform",
+    "floor": "platform",
+    "player": "player",
+    "character": "player",
+    "portal": "portal",
+    "portals": "portal",
+    "rope": "rope",
+    "ropes": "rope",
+    "ladder": "rope",
+    "ladders": "rope",
 }
 
 
@@ -243,6 +252,46 @@ def remap_label_lines(
     return output_lines, boxes_seen, boxes_skipped_unknown_class, 0
 
 
+def parse_aspect_ratio(value: str) -> Optional[Tuple[int, int]]:
+    text = value.strip().lower()
+    if text in {"", "none", "off", "false", "0"}:
+        return None
+
+    if ":" not in text:
+        raise ValueError(f"Invalid aspect ratio: {value!r}. Expected format like 16:9 or none.")
+
+    width_text, height_text = text.split(":", 1)
+    width = int(width_text)
+    height = int(height_text)
+
+    if width <= 0 or height <= 0:
+        raise ValueError(f"Invalid aspect ratio: {value!r}. Width and height must be positive.")
+
+    return width, height
+
+
+def copy_or_restore_image_aspect(
+    source_image: Path,
+    destination_image: Path,
+    restore_aspect: Optional[Tuple[int, int]],
+) -> None:
+    if restore_aspect is None:
+        shutil.copy2(source_image, destination_image)
+        return
+
+    image = Image.open(source_image)
+    image = image.convert("RGB")
+
+    source_width, source_height = image.size
+    aspect_width, aspect_height = restore_aspect
+
+    target_width = source_width
+    target_height = max(1, round(target_width * aspect_height / aspect_width))
+
+    image = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
+    image.save(destination_image)
+
+
 def import_dataset(
     source_dir: Path,
     output_real_dir: Path,
@@ -251,6 +300,7 @@ def import_dataset(
     prefix: str,
     clean: bool,
     drop_empty: bool,
+    restore_aspect: Optional[Tuple[int, int]],
 ) -> ImportStats:
     output_image_dir = output_real_dir / "images"
     output_label_dir = output_real_dir / "labels"
@@ -308,7 +358,7 @@ def import_dataset(
             dst_image = output_image_dir / f"{dst_stem}{image_path.suffix.lower()}"
             dst_label = output_label_dir / f"{dst_stem}.txt"
 
-            shutil.copy2(image_path, dst_image)
+            copy_or_restore_image_aspect(image_path, dst_image, restore_aspect)
             dst_label.write_text("\n".join(output_lines) + ("\n" if output_lines else ""), encoding="utf-8")
 
             images_copied += 1
@@ -352,8 +402,8 @@ def parse_args() -> argparse.Namespace:
         default=[],
         metavar="SOURCE=TARGET",
         help=(
-            "Manual class-name mapping. TARGET must be one of rope/platform/monster/item. "
-            "Example: --map Ladder=rope --map Enemy=monster"
+            "Manual class-name mapping. TARGET must be one of item/mob/platform/player/portal/rope. "
+            "Example: --map Monster=mob --map Ladder=rope"
         ),
     )
     parser.add_argument(
@@ -365,6 +415,16 @@ def parse_args() -> argparse.Namespace:
         "--drop-empty",
         action="store_true",
         help="Drop images whose labels contain no target classes after remapping.",
+    )
+    parser.add_argument(
+        "--restore-aspect",
+        default="none",
+        metavar="RATIO",
+        help=(
+            "Optionally undo Roboflow Stretch-to-square exports by resizing imported images "
+            "back to an expected aspect ratio such as 16:9. YOLO normalized labels remain valid "
+            "for whole-image anisotropic resizing. Default: none."
+        ),
     )
     return parser.parse_args()
 
@@ -378,6 +438,7 @@ def main() -> int:
     source_names = load_source_names(data_yaml_path)
     manual_maps = parse_manual_maps(args.map)
     class_id_map, skipped_classes = build_class_id_map(source_names, manual_maps)
+    restore_aspect = parse_aspect_ratio(args.restore_aspect)
 
     print("[INFO] Source classes:")
     for source_id, source_name in sorted(source_names.items()):
@@ -399,6 +460,9 @@ def main() -> int:
         for source_id, source_name in sorted(skipped_classes.items()):
             print(f"  {source_id}: {source_name}")
 
+    if restore_aspect is not None:
+        print(f"[INFO] Restoring imported image aspect ratio to {restore_aspect[0]}:{restore_aspect[1]}")
+
     stats = import_dataset(
         source_dir=source_dir,
         output_real_dir=args.output_real_dir,
@@ -406,6 +470,7 @@ def main() -> int:
         prefix=args.prefix,
         clean=args.clean,
         drop_empty=args.drop_empty,
+        restore_aspect=restore_aspect,
     )
 
     print("[DONE] Roboflow YOLO dataset imported")

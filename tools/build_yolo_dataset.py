@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Build a YOLO dataset for MapleStory monster/item detection.
+Build a YOLO dataset for MapleStory detection.
 
 Input conventions:
 
@@ -31,10 +31,12 @@ Output:
     data.yaml
 
 Classes:
-  0: rope
-  1: platform
-  2: monster
-  3: item
+  0: Item
+  1: Mob
+  2: Platform
+  3: Player
+  4: Portal
+  5: Rope
 
 Recommended usage:
 
@@ -167,17 +169,20 @@ def copy_sample(
 
 
 def write_data_yaml(output_dir: Path) -> None:
-    data_yaml = """path: .
+    dataset_root = output_dir.resolve().as_posix()
+    data_yaml = f"""path: {dataset_root}
 train: images/train
 val: images/val
 test: images/test
 
-nc: 4
+nc: 6
 names:
-  0: rope
-  1: platform
-  2: monster
-  3: item
+  0: Item
+  1: Mob
+  2: Platform
+  3: Player
+  4: Portal
+  5: Rope
 """
     (output_dir / "data.yaml").write_text(data_yaml, encoding="utf-8")
 

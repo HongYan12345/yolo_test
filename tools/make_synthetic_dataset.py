@@ -7,13 +7,15 @@ This script composites crawled transparent PNG assets onto real/empty map
 background screenshots and writes YOLO-format labels.
 
 Classes:
-  0: rope
-  1: platform
-  2: monster
-  3: item
+  0: Item
+  1: Mob
+  2: Platform
+  3: Player
+  4: Portal
+  5: Rope
 
-This synthetic generator only creates labels for monster/item automatically.
-Rope/platform labels should come from manually labeled real screenshots.
+This synthetic generator only creates labels for Mob/Item automatically.
+Platform/Player/Portal/Rope labels should come from manually labeled real screenshots.
 
 Recommended usage:
 
@@ -304,7 +306,7 @@ def generate_one(
             sprite,
             x,
             y,
-            class_id=2,
+            class_id=1,
             min_visible_ratio=args.min_visible_ratio,
         )
         if box:
@@ -341,7 +343,7 @@ def generate_one(
             sprite,
             x,
             y,
-            class_id=3,
+            class_id=0,
             min_visible_ratio=args.min_visible_ratio,
         )
         if box:

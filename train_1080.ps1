@@ -68,7 +68,7 @@ function Get-MissingLabels {
     $images = Get-ChildItem $ImageDir -Recurse -File -Include *.png,*.jpg,*.jpeg,*.bmp,*.webp
 
     foreach ($image in $images) {
-        $relativeImagePath = [System.IO.Path]::GetRelativePath($imageRoot, $image.FullName)
+        $relativeImagePath = $image.FullName.Substring($imageRoot.Length).TrimStart("\", "/")
         $relativeLabelPath = [System.IO.Path]::ChangeExtension($relativeImagePath, ".txt")
         $expectedLabelPath = Join-Path $labelRoot $relativeLabelPath
 
@@ -80,7 +80,7 @@ function Get-MissingLabels {
     return $missing
 }
 
-function Test-SyntheticLabelsUseFourClassMapping {
+function Test-SyntheticLabelsUseRoboflowClassMapping {
     param([string]$LabelDir)
 
     if (-not (Test-Path $LabelDir)) {
@@ -98,9 +98,16 @@ function Test-SyntheticLabelsUseFourClassMapping {
                 continue
             }
 
-            # Synthetic generator only creates monster/item labels.
-            # In the four-class mapping those must be 2/3, not old 0/1.
-            if ($trimmed -match "^[01]\s+") {
+            # Roboflow class mapping:
+            #   0 Item
+            #   1 Mob
+            #   2 Platform
+            #   3 Player
+            #   4 Portal
+            #   5 Rope
+            # Synthetic generator only creates Mob/Item labels, so synthetic labels
+            # should only contain class 0/1.
+            if ($trimmed -notmatch "^[01]\s+") {
                 return $false
             }
         }
@@ -109,7 +116,7 @@ function Test-SyntheticLabelsUseFourClassMapping {
     return $true
 }
 
-function Test-YoloDataYamlUseFourClassMapping {
+function Test-YoloDataYamlUseRoboflowClassMapping {
     param([string]$DataYamlPath)
 
     if (-not (Test-Path $DataYamlPath)) {
@@ -119,11 +126,13 @@ function Test-YoloDataYamlUseFourClassMapping {
     $content = Get-Content $DataYamlPath -Raw -ErrorAction SilentlyContinue
 
     return (
-        $content -match "nc:\s*4" -and
-        $content -match "0:\s*rope" -and
-        $content -match "1:\s*platform" -and
-        $content -match "2:\s*monster" -and
-        $content -match "3:\s*item"
+        $content -match "nc:\s*6" -and
+        $content -match "0:\s*Item" -and
+        $content -match "1:\s*Mob" -and
+        $content -match "2:\s*Platform" -and
+        $content -match "3:\s*Player" -and
+        $content -match "4:\s*Portal" -and
+        $content -match "5:\s*Rope"
     )
 }
 
@@ -337,19 +346,21 @@ function Build-SyntheticDataset {
     $syntheticImageCount = Count-Images "datasets\synthetic\images"
 
     if ($syntheticImageCount -ge $SyntheticCount -and -not $RebuildSynthetic) {
-        $syntheticLabelsOk = Test-SyntheticLabelsUseFourClassMapping "datasets\synthetic\labels"
+        $syntheticLabelsOk = Test-SyntheticLabelsUseRoboflowClassMapping "datasets\synthetic\labels"
         if (-not $syntheticLabelsOk) {
             throw @"
-Existing synthetic labels look like the old 2-class mapping.
+Existing synthetic labels do not match the current Roboflow class mapping.
 
 Current class mapping is:
 
-  0 rope
-  1 platform
-  2 monster
-  3 item
+  0 Item
+  1 Mob
+  2 Platform
+  3 Player
+  4 Portal
+  5 Rope
 
-Synthetic labels should only contain class 2/3 because the synthetic generator only creates monster/item.
+Synthetic labels should only contain class 0/1 because the synthetic generator only creates Item/Mob.
 
 Please rebuild synthetic and YOLO datasets:
 
@@ -390,17 +401,19 @@ function Build-YoloDataset {
     Write-Section "Building YOLO dataset"
 
     if ((Test-Path "datasets\yolo\data.yaml") -and -not $RebuildYolo) {
-        $yoloDataYamlOk = Test-YoloDataYamlUseFourClassMapping "datasets\yolo\data.yaml"
+        $yoloDataYamlOk = Test-YoloDataYamlUseRoboflowClassMapping "datasets\yolo\data.yaml"
         if (-not $yoloDataYamlOk) {
             throw @"
-Existing datasets\yolo\data.yaml does not use the current four-class mapping.
+Existing datasets\yolo\data.yaml does not use the current Roboflow class mapping.
 
 Current class mapping is:
 
-  0 rope
-  1 platform
-  2 monster
-  3 item
+  0 Item
+  1 Mob
+  2 Platform
+  3 Player
+  4 Portal
+  5 Rope
 
 Please rebuild the YOLO dataset:
 
